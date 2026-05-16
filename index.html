@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Manager Command Center</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="IT Center">
+  <meta name="theme-color" content="#0f1117">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2333;--border:#2a2f45;
+  --text:#e8eaf0;--muted:#6b7194;--accent:#4f8ef7;--green:#3ecf8e;
+  --amber:#f5a623;--red:#f25f5c;--purple:#a78bfa;
+  --font-mono:'IBM Plex Mono',monospace;--font-sans:'IBM Plex Sans',sans-serif;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font-mono)}
+.app{padding:1.5rem;max-width:980px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;border-bottom:0.5px solid var(--border);padding-bottom:1rem;flex-wrap:wrap;gap:10px}
+.logo{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.dateline{font-size:20px;font-weight:500}
+.greeting{font-size:12px;color:var(--muted);margin-top:4px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status-bar{display:flex;gap:10px;align-items:center}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+.status-dot.amber{background:var(--amber);animation:none}
+.status-dot.red{background:var(--red);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.status-label{font-size:11px;color:var(--muted)}
+.auth-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-family:var(--font-mono);cursor:pointer}
+.auth-btn:hover{opacity:0.85}
+.auth-btn.out{background:none;border:0.5px solid var(--border);color:var(--muted)}
+.sync-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.sync-btn{background:none;border:0.5px solid var(--border);border-radius:5px;padding:3px 10px;font-size:11px;color:var(--muted);font-family:var(--font-mono);cursor:pointer}
+.sync-btn:hover{border-color:var(--accent);color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:1rem 1.1rem}
+.card-full{grid-column:1/-1}
+.card-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.card-action{font-size:10px;color:var(--accent);cursor:pointer;background:none;border:none;font-family:var(--font-mono);letter-spacing:0.06em}
+.card-action:hover{text-decoration:underline}
+.score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.score-item{background:var(--surface2);border-radius:7px;padding:8px 10px;border:0.5px solid var(--border)}
+.score-name{font-size:10px;color:var(--muted);margin-bottom:4px}
+.score-val{font-size:17px;font-weight:500}
+.score-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:5px}
+.score-bar{height:3px;border-radius:2px}
+.score-input{width:44px;background:var(--surface);border:0.5px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 4px;margin-left:5px}
+.team-list{display:flex;flex-direction:column;gap:7px}
+.team-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:7px;padding:7px 10px;border:0.5px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.member-name{font-size:12px}.member-role{font-size:10px;color:var(--muted)}
+.mood-btns{display:flex;gap:4px;margin-left:auto}
+.mood-btn{background:none;border:0.5px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--muted);font-family:var(--font-mono)}
+.mood-g{border-color:var(--green)!important;color:var(--green)!important;background:rgba(62,207,142,0.08)!important}
+.mood-a{border-color:var(--amber)!important;color:var(--amber)!important;background:rgba(245,166,35,0.08)!important}
+.mood-r{border-color:var(--red)!important;color:var(--red)!important;background:rgba(242,95,92,0.08)!important}
+.standup-tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:5px;cursor:pointer;border:0.5px solid var(--border);color:var(--muted)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.standup-area{display:none;flex-direction:column;gap:6px}
+.standup-area.active{display:flex}
+.standup-input{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--font-mono);font-size:12px;resize:none;line-height:1.5}
+.standup-input:focus{outline:none;border-color:var(--accent)}
+.standup-input::placeholder{color:var(--muted)}
+.log-btn{align-self:flex-end;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-family:var(--font-mono);cursor:pointer}
+.log-entries{display:flex;flex-direction:column;gap:5px;max-height:130px;overflow-y:auto;margin-top:8px}
+.log-entry{background:var(--surface2);border-radius:6px;padding:7px 10px;font-size:11px;line-height:1.5;border-left:2px solid}
+.log-meta{font-size:10px;color:var(--muted);margin-bottom:2px}
+.empty-state{font-size:11px;color:var(--muted);text-align:center;padding:14px}
+.task-add{display:flex;gap:6px;margin-bottom:8px}
+.task-input{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:var(--font-mono);font-size:12px}
+.task-input:focus{outline:none;border-color:var(--accent)}
+.task-input::placeholder{color:var(--muted)}
+.task-sel{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--font-mono);font-size:11px}
+.add-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--font-mono);cursor:pointer}
+.task-list{display:flex;flex-direction:column;gap:5px;max-height:170px;overflow-y:auto}
+.task-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:6px;padding:6px 10px;border:0.5px solid var(--border)}
+.task-row.done .task-text{text-decoration:line-through;color:var(--muted)}
+.task-check{width:14px;height:14px;border-radius:3px;border:0.5px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+.task-check.checked{background:var(--green);border-color:var(--green)}
+.task-text{font-size:12px;flex:1}
+.task-pri{font-size:10px;padding:1px 7px;border-radius:10px}
+.pri-p1{background:rgba(242,95,92,0.15);color:var(--red)}
+.pri-p2{background:rgba(245,166,35,0.15);color:var(--amber)}
+.pri-p3{background:rgba(79,142,247,0.15);color:var(--accent)}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px}
+.del-btn:hover{color:var(--red)}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.chip{font-size:10px;padding:3px 9px;border-radius:10px;border:0.5px solid var(--border);color:var(--muted);cursor:pointer}
+.chip:hover{border-color:var(--purple);color:var(--purple)}
+.ai-messages{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.ai-msg{border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.6;font-family:var(--font-sans)}
+.ai-user{background:rgba(79,142,247,0.1);border:0.5px solid rgba(79,142,247,0.2)}
+.ai-reply{background:rgba(167,139,250,0.08);border:0.5px solid rgba(167,139,250,0.2)}
+.ai-meta{font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--font-mono)}
+.ai-input-row{display:flex;gap:6px}
+.ai-input{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--font-mono);font-size:12px}
+.ai-input:focus{outline:none;border-color:var(--purple)}
+.ai-input::placeholder{color:var(--muted)}
+.ask-btn{background:var(--purple);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:11px;font-family:var(--font-mono);cursor:pointer;white-space:nowrap}
+.ask-btn:disabled{opacity:0.4;cursor:not-allowed}
+.setup-box{background:rgba(79,142,247,0.06);border:0.5px solid rgba(79,142,247,0.25);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--muted);line-height:1.6}
+.setup-box strong{color:var(--accent)}
+.key-row{display:flex;gap:6px;margin-top:7px}
+.key-input{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:var(--font-mono);font-size:11px}
+.key-input::placeholder{color:var(--muted)}
+.save-key-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-family:var(--font-mono);cursor:pointer}
+/* Debug log */
+.debug-card{background:rgba(242,95,92,0.05);border:0.5px solid rgba(242,95,92,0.2)}
+.debug-log{font-size:11px;color:var(--muted);max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.debug-line{padding:2px 0;border-bottom:0.5px solid var(--border)}
+.debug-line.ok{color:var(--green)}
+.debug-line.err{color:var(--red)}
+.debug-line.info{color:var(--accent)}
+/* Sheet link */
+.sheet-link{font-size:10px;color:var(--green);text-decoration:none;letter-spacing:0.04em}
+.sheet-link:hover{text-decoration:underline}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:8px 16px;font-size:11px;opacity:0;transition:opacity 0.3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+.spinner-sm{display:inline-block;width:10px;height:10px;border:1.5px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:640px){.grid{grid-template-columns:1fr}.card-full{grid-column:1}.score-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── Mobile PWA styles ─────────────────────────────── */
+@media(max-width:640px){
+  .app{padding:0.75rem}
+  .grid{grid-template-columns:1fr!important}
+  .card-full{grid-column:1!important}
+  .score-grid{grid-template-columns:repeat(2,1fr)!important}
+  .header{flex-direction:column;gap:8px}
+  .header-right{align-items:flex-start;width:100%}
+  .status-bar{flex-wrap:wrap}
+  .dateline{font-size:16px}
+  .mood-btns{flex-wrap:wrap}
+  .task-add{flex-wrap:wrap}
+  .task-input{min-width:0;flex:1}
+  .ai-input-row{flex-direction:column}
+  .ask-btn{width:100%}
+  .chips{gap:4px}
+  .chip{font-size:9px;padding:3px 7px}
+  .auth-btn{width:100%;text-align:center;padding:10px}
+  table{font-size:11px}
+}
+/* Safe area for notch phones */
+.app{padding-top:max(1.5rem, env(safe-area-inset-top));padding-bottom:max(1rem, env(safe-area-inset-bottom))}
+/* Install banner */
+.install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:#181c27;border-top:0.5px solid #2a2f45;padding:12px 16px;z-index:999;align-items:center;gap:10px;flex-wrap:wrap}
+.install-banner.show{display:flex}
+.install-banner p{font-size:12px;color:#9ba1c0;flex:1;font-family:'IBM Plex Mono',monospace}
+.install-btn{background:#4f8ef7;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-family:'IBM Plex Mono',monospace;cursor:pointer;white-space:nowrap}
+.dismiss-btn{background:none;border:none;color:#6b7194;font-size:18px;cursor:pointer;padding:0 4px}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <div class="logo">IT Command Center</div>
+      <div class="dateline" id="dateline"></div>
+      <div class="greeting" id="greeting"></div>
+    </div>
+    <div class="header-right">
+      <div class="status-bar">
+        <div class="status-dot amber" id="statusDot"></div>
+        <div class="status-label" id="statusLabel">Not signed in</div>
+        <button class="auth-btn" id="authBtn" onclick="handleAuth()">Sign in with Google</button>
+      </div>
+      <div class="sync-row" id="syncRow" style="display:none">
+        <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1BBJT1AH5jXBwPLC2o7DsfrjHVwyxzdd2lvlhZrxmnsU/edit" target="_blank">↗ Open Sheet</a>
+        <span id="lastSync">Never synced</span>
+        <button class="sync-btn" onclick="syncAll()">Sync Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">IT Health Scorecard
+        <button class="card-action" onclick="saveScores()">💾 Save to Sheet</button>
+      </div>
+      <div class="score-grid" id="scoreGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Team Check-In
+        <button class="card-action" onclick="saveTeam()">💾 Save to Sheet</button>
+      </div>
+      <div class="team-list" id="teamList"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Standup Log
+        <button class="card-action" onclick="clearNotes()">Clear</button>
+      </div>
+      <div class="standup-tabs">
+        <div class="tab active" onclick="switchTab('done')">Done</div>
+        <div class="tab" onclick="switchTab('doing')">Doing</div>
+        <div class="tab" onclick="switchTab('blockers')">Blockers</div>
+      </div>
+      <div class="standup-area active" id="tab-done">
+        <textarea class="standup-input" id="input-done" rows="2" placeholder="What did you complete?"></textarea>
+        <button class="log-btn" onclick="logNote('done')">Log</button>
+      </div>
+      <div class="standup-area" id="tab-doing">
+        <textarea class="standup-input" id="input-doing" rows="2" placeholder="What are you working on today?"></textarea>
+        <button class="log-btn" onclick="logNote('doing')">Log</button>
+      </div>
+      <div class="standup-area" id="tab-blockers">
+        <textarea class="standup-input" id="input-blockers" rows="2" placeholder="Any blockers or escalations?"></textarea>
+        <button class="log-btn" onclick="logNote('blockers')">Log</button>
+      </div>
+      <div class="log-entries" id="logEntries"><div class="empty-state">No notes yet.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Priority Tasks
+        <button class="card-action" onclick="saveTasks()">💾 Save to Sheet</button>
+      </div>
+      <div class="task-add">
+        <input class="task-input" type="text" id="taskInput" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+        <select class="task-sel" id="taskPri">
+          <option value="P1">P1</option>
+          <option value="P2" selected>P2</option>
+          <option value="P3">P3</option>
+        </select>
+        <button class="add-btn" onclick="addTask()">Add</button>
+      </div>
+      <div class="task-list" id="taskList"></div>
+    </div>
+  </div>
+
+  <!-- Debug Panel -->
+  <div class="card card-full debug-card" style="margin-bottom:12px">
+    <div class="card-label">Sync Debug Log
+      <button class="card-action" onclick="clearDebug()">Clear</button>
+    </div>
+    <div class="debug-log" id="debugLog"><div class="debug-line info">Waiting for sign-in...</div></div>
+  </div>
+
+  <div class="card card-full">
+    <div class="card-label">AI Advisor <span style="color:var(--purple);font-size:10px">Powered by Groq / Llama 3 (Free)</span></div>
+    <div class="setup-box" id="aiSetupBox">
+      <strong>Groq API key needed.</strong> Get yours free at <strong>console.groq.com</strong> — no credit card required.
+      <div class="key-row">
+        <input class="key-input" type="password" id="claudeKeyInput" placeholder="gsk_...">
+        <button class="save-key-btn" onclick="saveClaudeKey()">Connect</button>
+      </div>
+    </div>
+    <div class="chips">
+      <div class="chip" onclick="askChip('What should I prioritize as an IT manager today?')">What to prioritize today</div>
+      <div class="chip" onclick="askChip('How do I handle a team member consistently missing deadlines?')">Team performance tip</div>
+      <div class="chip" onclick="askChip('Give me 3 quick wins an IT manager can do this week to improve team morale.')">Quick wins for morale</div>
+      <div class="chip" onclick="askChip('What are the key metrics an IT manager should track weekly?')">Key weekly metrics</div>
+    </div>
+    <div class="ai-messages" id="aiMessages"><div class="empty-state">Connect API key above, then ask anything about IT management.</div></div>
+    <div class="ai-input-row">
+      <input class="ai-input" type="text" id="aiInput" placeholder="Ask Claude anything..." onkeydown="if(event.key==='Enter')askAI()">
+      <button class="ask-btn" id="askBtn" onclick="askAI()">Ask Claude</button>
+    </div>
+  </div>
+</div>
+
+<div class="install-banner" id="installBanner">
+  <p>📱 Add to Home Screen for app-like experience</p>
+  <button class="install-btn" id="installBtn" onclick="installPWA()">Install</button>
+  <button class="dismiss-btn" onclick="document.getElementById('installBanner').classList.remove('show')">✕</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SHEET_ID  = '1BBJT1AH5jXBwPLC2o7DsfrjHVwyxzdd2lvlhZrxmnsU';
+let accessToken = null, claudeKey = '';
+const aiHistory = [];
+let taskCounter = 100;
+const isElectron = typeof window !== 'undefined' && typeof window.electronAPI !== 'undefined';
+
+// Pre-load Gemini key
+const GEMINI_KEY = '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';
+
+// Header
+const NOW = new Date();
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+document.getElementById('dateline').textContent=`${DAYS[NOW.getDay()]}, ${MONTHS[NOW.getMonth()]} ${NOW.getDate()}, ${NOW.getFullYear()}`;
+const hr=NOW.getHours();
+document.getElementById('greeting').textContent=`${hr<12?'Good morning':hr<17?'Good afternoon':'Good evening'}, Bot. Here's your daily briefing.`;
+
+// Debug
+function dbg(msg, type='info'){
+  const el=document.getElementById('debugLog');
+  const line=document.createElement('div');
+  line.className='debug-line '+type;
+  line.textContent=new Date().toLocaleTimeString()+' — '+msg;
+  el.insertBefore(line, el.firstChild);
+  console.log('[DEBUG]',msg);
+}
+function clearDebug(){document.getElementById('debugLog').innerHTML='';}
+
+// Status
+function setStatus(state,label){
+  document.getElementById('statusDot').className='status-dot'+(state==='ok'?'':state==='warn'?' amber':' red');
+  document.getElementById('statusLabel').textContent=label;
+}
+
+// Auth — works in both Electron and browser
+async function handleAuth(){
+  if(accessToken){
+    accessToken=null;
+    document.getElementById('authBtn').textContent='Sign in with Google';
+    document.getElementById('authBtn').className='auth-btn';
+    document.getElementById('syncRow').style.display='none';
+    setStatus('warn','Not signed in');
+    dbg('Signed out');
+    return;
+  }
+  if(isElectron){
+    // Electron: use native popup window via IPC
+    try{
+      dbg('Opening Google sign-in window...');
+      setStatus('warn','Signing in...');
+      const token = await window.electronAPI.signInWithGoogle();
+      accessToken = token;
+      dbg('Signed in via Electron OAuth','ok');
+      onSignedIn();
+    }catch(e){
+      dbg('Sign-in cancelled or failed: '+e.message,'err');
+      setStatus('red','Sign-in failed');
+    }
+  } else {
+    // Browser fallback — show manual token instructions
+    const token = prompt('Paste your Google OAuth access token (or use the browser version):');
+    if(token){ accessToken=token; onSignedIn(); }
+  }
+}
+
+async function onSignedIn(){
+  document.getElementById('authBtn').textContent='Sign Out';
+  document.getElementById('authBtn').className='auth-btn out';
+  document.getElementById('syncRow').style.display='flex';
+  setStatus('ok','Connected');
+  await ensureSheets();
+  await syncAll();
+}
+
+// ── Core API calls ────────────────────────────────────────────────────────────
+async function apiCall(url, options={}){
+  const headers={'Authorization':'Bearer '+accessToken,'Content-Type':'application/json',...(options.headers||{})};
+  const res=await fetch(url,{...options,headers});
+  const json=await res.json();
+  if(json.error){
+    dbg('API error ['+res.status+']: '+json.error.message,'err');
+    throw new Error(json.error.message);
+  }
+  return json;
+}
+
+async function sheetsGet(range){
+  dbg('GET '+range);
+  return apiCall(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`);
+}
+
+async function sheetsWrite(range, values){
+  dbg('WRITE '+range+' ('+values.length+' rows)');
+  return apiCall(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    {method:'PUT', body:JSON.stringify({range, majorDimension:'ROWS', values})}
+  );
+}
+
+async function sheetsClear(range){
+  dbg('CLEAR '+range);
+  return apiCall(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:clear`,{method:'POST'});
+}
+
+// Clear then write — most reliable approach
+async function sheetsRewrite(tab, rows){
+  await sheetsClear(`${tab}!A1:Z1000`);
+  if(rows.length) await sheetsWrite(`${tab}!A1:Z${rows.length}`, rows);
+  dbg('Rewrite complete: '+tab+' ('+rows.length+' rows)','ok');
+}
+
+async function sheetsAppendRow(tab, row){
+  dbg('APPEND to '+tab);
+  return apiCall(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab+'!A:Z')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    {method:'POST', body:JSON.stringify({majorDimension:'ROWS', values:[row]})}
+  );
+}
+
+// ── Ensure tabs exist ─────────────────────────────────────────────────────────
+async function ensureSheets(){
+  try{
+    dbg('Checking sheet tabs...');
+    const meta=await apiCall(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`);
+    const existing=(meta.sheets||[]).map(s=>s.properties.title);
+    dbg('Existing tabs: '+existing.join(', '));
+    const needed=['Tasks','Standup','Team','Scores'];
+    const toAdd=needed.filter(n=>!existing.includes(n));
+    if(!toAdd.length){dbg('All tabs exist','ok');return;}
+    dbg('Creating tabs: '+toAdd.join(', '));
+    await apiCall(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
+      method:'POST',
+      body:JSON.stringify({requests:toAdd.map(title=>({addSheet:{properties:{title}}}))})
+    });
+    await new Promise(r=>setTimeout(r,1500));
+    dbg('Tabs created — seeding default data...','ok');
+    if(toAdd.includes('Tasks'))   await sheetsRewrite('Tasks',[['ID','Task','Priority','Done'],[101,'Review SharePoint permissions','P1','FALSE'],[102,'Send SLA breach report','P1','FALSE'],[103,'Trigger DB backup run','P2','FALSE'],[104,'Update asset register Q2','P3','FALSE']]);
+    if(toAdd.includes('Standup')) await sheetsRewrite('Standup',[['Type','Note','Timestamp']]);
+    if(toAdd.includes('Team'))    await sheetsRewrite('Team',[['Name','Role','Mood'],['Ana Reyes','Network Engineer',''],['Marco Tan','Helpdesk Lead',''],['Jess Ocampo','Systems Admin',''],['Rico Dela Cruz','IT Support','']]);
+    if(toAdd.includes('Scores'))  await sheetsRewrite('Scores',[['Metric','Value','Color'],['Network Uptime','99','#3ecf8e'],['Ticket Resolution','87','#4f8ef7'],['Asset Coverage','94','#3ecf8e'],['SLA Compliance','72','#f5a623'],['Security Score','88','#4f8ef7'],['Team Capacity','65','#f25f5c']]);
+    dbg('All tabs seeded','ok');
+  }catch(e){dbg('ensureSheets failed: '+e.message,'err');}
+}
+
+// ── Sync all ──────────────────────────────────────────────────────────────────
+async function syncAll(){
+  if(!accessToken)return;
+  dbg('Starting full sync...');
+  try{
+    await Promise.all([loadScores(),loadTeam(),loadTasks(),loadStandup()]);
+    const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastSync').textContent='Synced '+t;
+    dbg('Full sync complete','ok');
+    showToast('Synced ✓','ok');
+  }catch(e){dbg('Sync failed: '+e.message,'err');showToast('Sync error — see debug log','err');}
+}
+
+// ── Scores ────────────────────────────────────────────────────────────────────
+let scores=[
+  {name:'Network Uptime',val:99,color:'#3ecf8e'},
+  {name:'Ticket Resolution',val:87,color:'#4f8ef7'},
+  {name:'Asset Coverage',val:94,color:'#3ecf8e'},
+  {name:'SLA Compliance',val:72,color:'#f5a623'},
+  {name:'Security Score',val:88,color:'#4f8ef7'},
+  {name:'Team Capacity',val:65,color:'#f25f5c'},
+];
+
+async function loadScores(){
+  try{
+    const d=await sheetsGet('Scores!A2:C100');
+    if(d.values&&d.values.length){scores=d.values.map(r=>({name:r[0]||'',val:parseInt(r[1])||0,color:r[2]||'#4f8ef7'}));}
+    renderScores();dbg('Scores loaded','ok');
+  }catch(e){dbg('loadScores: '+e.message,'err');}
+}
+
+function renderScores(){
+  document.getElementById('scoreGrid').innerHTML=scores.map((s,i)=>`
+    <div class="score-item">
+      <div class="score-name">${s.name}</div>
+      <div style="display:flex;align-items:center">
+        <div class="score-val" style="color:${s.color}">${s.val}%</div>
+        <input type="number" min="0" max="100" value="${s.val}" class="score-input" onchange="scores[${i}].val=Math.min(100,Math.max(0,parseInt(this.value)||0));renderScores()">
+      </div>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${s.val}%;background:${s.color}"></div></div>
+    </div>`).join('');
+}
+
+async function saveScores(){
+  if(!accessToken){showToast('Sign in first','err');return;}
+  try{
+    const rows=[['Metric','Value','Color'],...scores.map(s=>[s.name,String(s.val),s.color])];
+    await sheetsRewrite('Scores',rows);
+    showToast('Scores saved ✓','ok');
+  }catch(e){showToast('Failed: '+e.message,'err');}
+}
+
+// ── Team ──────────────────────────────────────────────────────────────────────
+const TC=['#4f8ef7','#3ecf8e','#a78bfa','#f5a623','#f25f5c','#3ecf8e'];
+let team=[{name:'Ana Reyes',role:'Network Engineer',mood:''},{name:'Marco Tan',role:'Helpdesk Lead',mood:''},{name:'Jess Ocampo',role:'Systems Admin',mood:''},{name:'Rico Dela Cruz',role:'IT Support',mood:''}];
+
+async function loadTeam(){
+  try{
+    const d=await sheetsGet('Team!A2:C100');
+    if(d.values&&d.values.length)team=d.values.map(r=>({name:r[0]||'',role:r[1]||'',mood:r[2]||''}));
+    renderTeam();dbg('Team loaded','ok');
+  }catch(e){dbg('loadTeam: '+e.message,'err');}
+}
+
+function ini(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function renderTeam(){
+  document.getElementById('teamList').innerHTML=team.map((m,i)=>`
+    <div class="team-row">
+      <div class="avatar" style="background:${TC[i%TC.length]}22;color:${TC[i%TC.length]}">${ini(m.name)}</div>
+      <div style="flex:1"><div class="member-name">${m.name}</div><div class="member-role">${m.role}</div></div>
+      <div class="mood-btns">
+        <button class="mood-btn ${m.mood==='g'?'mood-g':''}" onclick="setMood(${i},'g')">Good</button>
+        <button class="mood-btn ${m.mood==='a'?'mood-a':''}" onclick="setMood(${i},'a')">Risk</button>
+        <button class="mood-btn ${m.mood==='r'?'mood-r':''}" onclick="setMood(${i},'r')">Block</button>
+      </div>
+    </div>`).join('');
+}
+
+function setMood(i,m){team[i].mood=team[i].mood===m?'':m;renderTeam();}
+
+async function saveTeam(){
+  if(!accessToken){showToast('Sign in first','err');return;}
+  try{
+    const rows=[['Name','Role','Mood'],...team.map(m=>[m.name,m.role,m.mood||''])];
+    await sheetsRewrite('Team',rows);
+    showToast('Team saved ✓','ok');
+  }catch(e){showToast('Failed: '+e.message,'err');}
+}
+
+// ── Standup ───────────────────────────────────────────────────────────────────
+let notes=[], activeTab='done';
+const TC2={done:'#3ecf8e',doing:'#4f8ef7',blockers:'#f25f5c'};
+
+async function loadStandup(){
+  try{
+    const d=await sheetsGet('Standup!A2:C500');
+    if(d.values&&d.values.length){
+      const today=new Date().toLocaleDateString();
+      notes=d.values.filter(r=>r[2]&&r[2].includes(today.split('/')[0])).map(r=>({type:r[0],text:r[1],time:r[2]})).reverse();
+    }
+    renderNotes();dbg('Standup loaded','ok');
+  }catch(e){dbg('loadStandup: '+e.message,'err');}
+}
+
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['done','doing','blockers'][i]===t));
+  document.querySelectorAll('.standup-area').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+async function logNote(type){
+  const el=document.getElementById('input-'+type);
+  const val=el.value.trim();if(!val)return;
+  const ts=new Date().toLocaleString();
+  notes.unshift({type,text:val,time:ts});
+  el.value='';renderNotes();saveLocal();
+  if(accessToken){
+    try{await sheetsAppendRow('Standup',[type,val,ts]);showToast('Note logged ✓','ok');}
+    catch(e){dbg('logNote error: '+e.message,'err');showToast('Log failed','err');}
+  }
+}
+
+function renderNotes(){
+  const el=document.getElementById('logEntries');
+  if(!notes.length){el.innerHTML='<div class="empty-state">No notes today yet.</div>';return;}
+  el.innerHTML=notes.map(n=>`<div class="log-entry" style="border-color:${TC2[n.type]||'#4f8ef7'}"><div class="log-meta">${(n.type||'').toUpperCase()} · ${n.time}</div>${n.text}</div>`).join('');
+}
+function clearNotes(){notes=[];renderNotes();}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+let tasks=[];
+
+async function loadTasks(){
+  try{
+    const d=await sheetsGet('Tasks!A2:D500');
+    if(d.values&&d.values.length)tasks=d.values.map(r=>({id:parseInt(r[0])||taskCounter++,text:r[1]||'',pri:r[2]||'P2',done:r[3]==='TRUE'||r[3]==='true'}));
+    renderTasks();dbg('Tasks loaded ('+tasks.length+')','ok');
+  }catch(e){dbg('loadTasks: '+e.message,'err');}
+}
+
+function renderTasks(){
+  const el=document.getElementById('taskList');
+  if(!tasks.length){el.innerHTML='<div class="empty-state">No tasks yet.</div>';return;}
+  el.innerHTML=tasks.map(t=>`
+    <div class="task-row ${t.done?'done':''}">
+      <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
+      <div class="task-text">${t.text}</div>
+      <span class="task-pri pri-${t.pri.toLowerCase()}">${t.pri}</span>
+      <button class="del-btn" onclick="delTask(${t.id})">✕</button>
+    </div>`).join('');
+}
+
+async function addTask(){
+  const val=document.getElementById('taskInput').value.trim();if(!val)return;
+  tasks.unshift({id:taskCounter++,text:val,pri:document.getElementById('taskPri').value,done:false});
+  document.getElementById('taskInput').value='';
+  renderTasks();
+  saveLocal();
+  if(accessToken)await saveTasks();
+}
+
+async function toggleTask(id){
+  const t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;
+  renderTasks();saveLocal();if(accessToken)await saveTasks();
+}
+
+async function delTask(id){
+  tasks=tasks.filter(x=>x.id!==id);
+  renderTasks();saveLocal();if(accessToken)await saveTasks();
+}
+
+async function saveTasks(){
+  if(!accessToken){showToast('Sign in first','err');return;}
+  try{
+    const rows=[['ID','Task','Priority','Done'],...tasks.map(t=>[String(t.id),t.text,t.pri,t.done?'TRUE':'FALSE'])];
+    await sheetsRewrite('Tasks',rows);
+    showToast('Tasks saved ✓','ok');
+  }catch(e){showToast('Failed: '+e.message,'err');}
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+function saveClaudeKey(){
+  const val=document.getElementById('claudeKeyInput').value.trim();
+  if(!val.startsWith('gsk_')){alert('Invalid key — Groq keys start with gsk_...');return;}
+  claudeKey=val;
+  document.getElementById('aiSetupBox').style.display='none';
+  document.getElementById('aiMessages').innerHTML='<div class="empty-state">Gemini connected! Ask me anything about IT management.</div>';
+}
+
+async function askAI(prompt){
+  if(!claudeKey){alert('Paste your Gemini API key first');return;}
+  const input=document.getElementById('aiInput');
+  const q=prompt||input.value.trim();if(!q)return;
+  input.value='';aiHistory.push({role:'user',text:q});renderAI(true);
+  document.getElementById('askBtn').disabled=true;
+  try{
+    // Build Gemini contents array from history
+    const msgs=aiHistory.map(m=>({
+      role:m.role==='user'?'user':'assistant',
+      content:m.text
+    }));
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+claudeKey},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[
+          {role:'system',content:'You are an expert IT manager advisor. Give sharp, practical, concise advice. Plain text only, no markdown, no bullet symbols. Keep responses under 150 words unless depth is needed.'},
+          ...msgs
+        ],
+        max_tokens:500,
+        temperature:0.7
+      })
+    });
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+    const reply=data.choices?.[0]?.message?.content||'No response.';
+    aiHistory.push({role:'assistant',text:reply});
+  }catch(e){aiHistory.push({role:'assistant',text:'Error: '+e.message});}
+  document.getElementById('askBtn').disabled=false;renderAI(false);
+}
+
+function askChip(q){document.getElementById('aiInput').value=q;askAI(q);}
+
+function renderAI(loading){
+  const el=document.getElementById('aiMessages');
+  if(!aiHistory.length){el.innerHTML='<div class="empty-state">Ask me anything.</div>';return;}
+  el.innerHTML=aiHistory.map(m=>`<div class="ai-msg ${m.role==='user'?'ai-user':'ai-reply'}"><div class="ai-meta">${m.role==='user'?'You':'Claude'}</div>${m.text}</div>`).join('')+(loading?'<div class="ai-msg ai-reply"><div class="ai-meta">Claude</div><span class="spinner-sm"></span></div>':'');
+  el.scrollTop=el.scrollHeight;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',3000);
+}
+
+// Init
+renderScores();renderTeam();renderTasks();
+
+// Auto-connect Gemini key
+(function(){
+  claudeKey = GEMINI_KEY;
+  document.getElementById('aiSetupBox').style.display='none';
+  document.getElementById('aiMessages').innerHTML='<div class="empty-state">Groq AI ready! Ask me anything about IT management.</div>';
+  dbg('Groq AI connected — Llama 3.3 70B (free tier)','ok');
+})();
+
+// ── PWA Service Worker ────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>dbg('Service worker registered — app works offline','ok'))
+      .catch(e=>dbg('SW registration failed: '+e.message,'err'));
+  });
+}
+
+// ── Install prompt ────────────────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('installBanner').classList.remove('show');
+  showToast('App installed! 🎉','ok');
+});
+function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; });
+  } else {
+    // iOS instructions
+    showToast('Tap Share → Add to Home Screen','ok');
+  }
+}
+
+// ── localStorage persistence ──────────────────────────────────────────────────
+function saveLocal(){
+  try{
+    localStorage.setItem('itcc_tasks', JSON.stringify(tasks));
+    localStorage.setItem('itcc_notes', JSON.stringify(notes));
+    localStorage.setItem('itcc_team',  JSON.stringify(team));
+    localStorage.setItem('itcc_scores',JSON.stringify(scores));
+  }catch(e){ console.warn('localStorage save failed',e); }
+}
+
+function loadLocal(){
+  try{
+    const t=localStorage.getItem('itcc_tasks');   if(t){ tasks=JSON.parse(t);   renderTasks(); }
+    const n=localStorage.getItem('itcc_notes');   if(n){ notes=JSON.parse(n);   renderNotes(); }
+    const tm=localStorage.getItem('itcc_team');   if(tm){ team=JSON.parse(tm);  renderTeam(); }
+    const s=localStorage.getItem('itcc_scores');  if(s){ scores=JSON.parse(s);  renderScores(); }
+    dbg('Local data loaded from device storage','ok');
+  }catch(e){ console.warn('localStorage load failed',e); }
+}
+
+// Load local data immediately on start
+loadLocal();
+
+</script>
+</body>
+</html>
