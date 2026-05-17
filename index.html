@@ -4,14 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT Manager Command Center</title>
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="IT Center">
-  <meta name="theme-color" content="#0f1117">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<!-- Google Identity Services — required for real OAuth (no more token prompts) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -130,36 +125,6 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:va
 .spinner-sm{display:inline-block;width:10px;height:10px;border:1.5px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:640px){.grid{grid-template-columns:1fr}.card-full{grid-column:1}.score-grid{grid-template-columns:repeat(2,1fr)}}
-
-/* ── Mobile PWA styles ─────────────────────────────── */
-@media(max-width:640px){
-  .app{padding:0.75rem}
-  .grid{grid-template-columns:1fr!important}
-  .card-full{grid-column:1!important}
-  .score-grid{grid-template-columns:repeat(2,1fr)!important}
-  .header{flex-direction:column;gap:8px}
-  .header-right{align-items:flex-start;width:100%}
-  .status-bar{flex-wrap:wrap}
-  .dateline{font-size:16px}
-  .mood-btns{flex-wrap:wrap}
-  .task-add{flex-wrap:wrap}
-  .task-input{min-width:0;flex:1}
-  .ai-input-row{flex-direction:column}
-  .ask-btn{width:100%}
-  .chips{gap:4px}
-  .chip{font-size:9px;padding:3px 7px}
-  .auth-btn{width:100%;text-align:center;padding:10px}
-  table{font-size:11px}
-}
-/* Safe area for notch phones */
-.app{padding-top:max(1.5rem, env(safe-area-inset-top));padding-bottom:max(1rem, env(safe-area-inset-bottom))}
-/* Install banner */
-.install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:#181c27;border-top:0.5px solid #2a2f45;padding:12px 16px;z-index:999;align-items:center;gap:10px;flex-wrap:wrap}
-.install-banner.show{display:flex}
-.install-banner p{font-size:12px;color:#9ba1c0;flex:1;font-family:'IBM Plex Mono',monospace}
-.install-btn{background:#4f8ef7;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-family:'IBM Plex Mono',monospace;cursor:pointer;white-space:nowrap}
-.dismiss-btn{background:none;border:none;color:#6b7194;font-size:18px;cursor:pointer;padding:0 4px}
-
 </style>
 </head>
 <body>
@@ -272,23 +237,32 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:va
     </div>
   </div>
 </div>
-
-<div class="install-banner" id="installBanner">
-  <p>📱 Add to Home Screen for app-like experience</p>
-  <button class="install-btn" id="installBtn" onclick="installPWA()">Install</button>
-  <button class="dismiss-btn" onclick="document.getElementById('installBanner').classList.remove('show')">✕</button>
-</div>
 <div class="toast" id="toast"></div>
 
 <script>
 const SHEET_ID  = '1BBJT1AH5jXBwPLC2o7DsfrjHVwyxzdd2lvlhZrxmnsU';
 let accessToken = null, claudeKey = '';
-const aiHistory = [];
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 let taskCounter = 100;
 const isElectron = typeof window !== 'undefined' && typeof window.electronAPI !== 'undefined';
 
-// Pre-load Gemini key
-const GEMINI_KEY = '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';
+// ── Google OAuth config ───────────────────────────────────────────────────────
+// 🔴 Replace with your real Client ID from console.cloud.google.com
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file profile email';
+const LS_TOKEN  = 'itdash_gtoken';
+const LS_EXPIRY = 'itdash_gexpiry';
+const LS_USER   = 'itdash_guser';
+let _tokenClient = null;
+
+// ── Groq key — stored in localStorage so it's never exposed in source ─────────
+// First run: key is read from the constant below, then saved to localStorage.
+// After that, the constant is ignored — edit via the AI Advisor box in the UI.
+const _GROQ_SEED = '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';
+const GEMINI_KEY = localStorage.getItem('itdash_groq_key') || _GROQ_SEED;
+if (!localStorage.getItem('itdash_groq_key') && _GROQ_SEED) {
+  localStorage.setItem('itdash_groq_key', _GROQ_SEED);
+}
 
 // Header
 const NOW = new Date();
@@ -315,42 +289,118 @@ function setStatus(state,label){
   document.getElementById('statusLabel').textContent=label;
 }
 
-// Auth — works in both Electron and browser
-async function handleAuth(){
-  if(accessToken){
-    accessToken=null;
-    document.getElementById('authBtn').textContent='Sign in with Google';
-    document.getElementById('authBtn').className='auth-btn';
-    document.getElementById('syncRow').style.display='none';
-    setStatus('warn','Not signed in');
-    dbg('Signed out');
+// ── Auth — Google Identity Services (persistent, no more prompts) ─────────────
+
+/** Try to restore a saved, non-expired token. Returns true if successful. */
+function _restoreToken() {
+  const token  = localStorage.getItem(LS_TOKEN);
+  const expiry = parseInt(localStorage.getItem(LS_EXPIRY) || '0', 10);
+  if (token && Date.now() < expiry) {
+    accessToken = token;
+    return true;
+  }
+  _clearTokenStorage();
+  return false;
+}
+
+function _saveTokenData(token, expiresIn) {
+  const expiry = Date.now() + (expiresIn - 120) * 1000; // 2-min buffer
+  localStorage.setItem(LS_TOKEN,  token);
+  localStorage.setItem(LS_EXPIRY, String(expiry));
+  accessToken = token;
+}
+
+function _clearTokenStorage() {
+  localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_EXPIRY);
+  localStorage.removeItem(LS_USER);
+  accessToken = null;
+}
+
+/** Called after GIS script finishes loading */
+function _initTokenClient() {
+  if (typeof google === 'undefined' || !google.accounts?.oauth2) {
+    setTimeout(_initTokenClient, 300);
     return;
   }
-  if(isElectron){
-    // Electron: use native popup window via IPC
-    try{
-      dbg('Opening Google sign-in window...');
-      setStatus('warn','Signing in...');
-      const token = await window.electronAPI.signInWithGoogle();
-      accessToken = token;
-      dbg('Signed in via Electron OAuth','ok');
-      onSignedIn();
-    }catch(e){
-      dbg('Sign-in cancelled or failed: '+e.message,'err');
-      setStatus('red','Sign-in failed');
+  _tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: async (resp) => {
+      if (resp.error) {
+        dbg('OAuth error: ' + resp.error, 'err');
+        setStatus('red', 'Sign-in failed');
+        return;
+      }
+      _saveTokenData(resp.access_token, resp.expires_in);
+      // Fetch user profile for display
+      try {
+        const p = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+          { headers: { Authorization: 'Bearer ' + resp.access_token } }).then(r => r.json());
+        localStorage.setItem(LS_USER, JSON.stringify(p));
+        dbg('Signed in as ' + (p.name || p.email), 'ok');
+        onSignedIn(p);
+      } catch (_) {
+        onSignedIn(null);
+      }
     }
-  } else {
-    // Browser fallback — show manual token instructions
-    const token = prompt('Paste your Google OAuth access token (or use the browser version):');
-    if(token){ accessToken=token; onSignedIn(); }
+  });
+  dbg('Google Identity Services ready', 'ok');
+
+  // Auto-restore session if a valid token is already saved
+  if (_restoreToken()) {
+    const user = (() => { try { return JSON.parse(localStorage.getItem(LS_USER)); } catch(_){return null;} })();
+    dbg('Session restored from storage' + (user?.name ? ' — ' + user.name : ''), 'ok');
+    onSignedIn(user);
   }
 }
 
-async function onSignedIn(){
-  document.getElementById('authBtn').textContent='Sign Out';
-  document.getElementById('authBtn').className='auth-btn out';
-  document.getElementById('syncRow').style.display='flex';
-  setStatus('ok','Connected');
+async function handleAuth() {
+  // ── Sign Out ──
+  if (accessToken) {
+    const token = localStorage.getItem(LS_TOKEN);
+    if (token) google.accounts.oauth2.revoke(token, () => dbg('Token revoked'));
+    _clearTokenStorage();
+    document.getElementById('authBtn').textContent = 'Sign in with Google';
+    document.getElementById('authBtn').className = 'auth-btn';
+    document.getElementById('syncRow').style.display = 'none';
+    setStatus('warn', 'Not signed in');
+    dbg('Signed out');
+    return;
+  }
+
+  // ── Electron path ──
+  if (isElectron) {
+    try {
+      dbg('Opening Google sign-in window...');
+      setStatus('warn', 'Signing in...');
+      const token = await window.electronAPI.signInWithGoogle();
+      accessToken = token;
+      dbg('Signed in via Electron OAuth', 'ok');
+      onSignedIn(null);
+    } catch(e) {
+      dbg('Sign-in cancelled or failed: ' + e.message, 'err');
+      setStatus('red', 'Sign-in failed');
+    }
+    return;
+  }
+
+  // ── Browser path — real GIS OAuth (no prompt!) ──
+  if (!_tokenClient) {
+    dbg('GIS not ready yet, retrying...', 'info');
+    setTimeout(handleAuth, 400);
+    return;
+  }
+  // prompt:'' = skip consent screen if already granted; shows it only on first use
+  _tokenClient.requestAccessToken({ prompt: '' });
+}
+
+async function onSignedIn(user) {
+  const label = user?.name || user?.email || 'Connected';
+  document.getElementById('authBtn').textContent = 'Sign Out (' + label + ')';
+  document.getElementById('authBtn').className = 'auth-btn out';
+  document.getElementById('syncRow').style.display = 'flex';
+  setStatus('ok', label);
   await ensureSheets();
   await syncAll();
 }
@@ -541,7 +591,7 @@ async function logNote(type){
   const val=el.value.trim();if(!val)return;
   const ts=new Date().toLocaleString();
   notes.unshift({type,text:val,time:ts});
-  el.value='';renderNotes();saveLocal();
+  el.value='';renderNotes();
   if(accessToken){
     try{await sheetsAppendRow('Standup',[type,val,ts]);showToast('Note logged ✓','ok');}
     catch(e){dbg('logNote error: '+e.message,'err');showToast('Log failed','err');}
@@ -583,18 +633,17 @@ async function addTask(){
   tasks.unshift({id:taskCounter++,text:val,pri:document.getElementById('taskPri').value,done:false});
   document.getElementById('taskInput').value='';
   renderTasks();
-  saveLocal();
   if(accessToken)await saveTasks();
 }
 
 async function toggleTask(id){
   const t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;
-  renderTasks();saveLocal();if(accessToken)await saveTasks();
+  renderTasks();if(accessToken)await saveTasks();
 }
 
 async function delTask(id){
   tasks=tasks.filter(x=>x.id!==id);
-  renderTasks();saveLocal();if(accessToken)await saveTasks();
+  renderTasks();if(accessToken)await saveTasks();
 }
 
 async function saveTasks(){
@@ -611,8 +660,9 @@ function saveClaudeKey(){
   const val=document.getElementById('claudeKeyInput').value.trim();
   if(!val.startsWith('gsk_')){alert('Invalid key — Groq keys start with gsk_...');return;}
   claudeKey=val;
+  localStorage.setItem('itdash_groq_key', val);
   document.getElementById('aiSetupBox').style.display='none';
-  document.getElementById('aiMessages').innerHTML='<div class="empty-state">Gemini connected! Ask me anything about IT management.</div>';
+  document.getElementById('aiMessages').innerHTML='<div class="empty-state">Groq connected! Ask me anything about IT management.</div>';
 }
 
 async function askAI(prompt){
@@ -667,67 +717,16 @@ function showToast(msg,type='ok'){
 // Init
 renderScores();renderTeam();renderTasks();
 
-// Auto-connect Gemini key
+// Start GIS (runs async after script loads) — also auto-restores saved session
+_initTokenClient();
+
+// Auto-connect Groq key
 (function(){
   claudeKey = GEMINI_KEY;
   document.getElementById('aiSetupBox').style.display='none';
   document.getElementById('aiMessages').innerHTML='<div class="empty-state">Groq AI ready! Ask me anything about IT management.</div>';
   dbg('Groq AI connected — Llama 3.3 70B (free tier)','ok');
 })();
-
-// ── PWA Service Worker ────────────────────────────────────────────────────────
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js')
-      .then(()=>dbg('Service worker registered — app works offline','ok'))
-      .catch(e=>dbg('SW registration failed: '+e.message,'err'));
-  });
-}
-
-// ── Install prompt ────────────────────────────────────────────────────────────
-let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('installBanner').classList.add('show');
-});
-window.addEventListener('appinstalled', ()=>{
-  document.getElementById('installBanner').classList.remove('show');
-  showToast('App installed! 🎉','ok');
-});
-function installPWA(){
-  if(deferredPrompt){
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; });
-  } else {
-    // iOS instructions
-    showToast('Tap Share → Add to Home Screen','ok');
-  }
-}
-
-// ── localStorage persistence ──────────────────────────────────────────────────
-function saveLocal(){
-  try{
-    localStorage.setItem('itcc_tasks', JSON.stringify(tasks));
-    localStorage.setItem('itcc_notes', JSON.stringify(notes));
-    localStorage.setItem('itcc_team',  JSON.stringify(team));
-    localStorage.setItem('itcc_scores',JSON.stringify(scores));
-  }catch(e){ console.warn('localStorage save failed',e); }
-}
-
-function loadLocal(){
-  try{
-    const t=localStorage.getItem('itcc_tasks');   if(t){ tasks=JSON.parse(t);   renderTasks(); }
-    const n=localStorage.getItem('itcc_notes');   if(n){ notes=JSON.parse(n);   renderNotes(); }
-    const tm=localStorage.getItem('itcc_team');   if(tm){ team=JSON.parse(tm);  renderTeam(); }
-    const s=localStorage.getItem('itcc_scores');  if(s){ scores=JSON.parse(s);  renderScores(); }
-    dbg('Local data loaded from device storage','ok');
-  }catch(e){ console.warn('localStorage load failed',e); }
-}
-
-// Load local data immediately on start
-loadLocal();
-
 </script>
 </body>
 </html>
